@@ -230,7 +230,7 @@ db.teachers.deleteMany({ email: "v@gmail.com" });
 //? ==> comparison operators (less than, not equals to, etc.)
 //? ==> logical operators (logical AND, logical OR, etc..)
 //? ==> array operators (size, all, elemMatch, etc..)
-//? ==> element operators (exists, size, etc..)
+//? ==> element operators (exists, type, etc..)
 //? ==> evaluation operators (regex, expr, etc..)
 //~ update operators
 //? ==> field update op (set, unset, etc..)
@@ -692,7 +692,9 @@ db.survey.insertMany([
   { _id: 5, results: { product: "xyz", score: 7 } },
 ]);
 
-//! $elemMatch (element matching) ==> this is an array query operator, used to fetch the documents which are fulfilling the given condition in the array (used when we need to work on array of documents)
+db.survey.find({ "results.product.score": { $gt: 8 } });
+
+//! $elemMatch (element matching) ==> this is an array query operator, used to fetch the documents which are fulfilling the given condition in the array (used when we need to work on array of documents/objects) [{}, {}, ...]
 
 //& syntax for $elemMatch ==>
 //? filter part --> { fieldName: {$elemMatch: { key: value } } }
@@ -708,14 +710,79 @@ db.survey.find({ results: { $elemMatch: { score: { $gt: 7 } } } });
 
 //! get the details of the employees whose name is "varun"
 db.emp.find({ name: { $regex: /varun/ } }, { name: 1, _id: 0 });
+db.emp.find({ name: { $eq: varun } }, { name: 1, _id: 0 });
 
 //! get the details of the employees whose name starts with letter "a"
 db.emp.find({ name: { $regex: /^a/ } }, { name: 1, _id: 0 });
 //& cap symbol ( shift + 6 ) --> denotes that compare the pattern from starting position
 
 //! get the details of the employees whose name ends with letter "a"
-db.emp.find({ name: { $regex: /ha$/ } }, { name: 1, _id: 0 });
-
+db.emp.find({ name: { $regex: /a$/ } }, { name: 1, _id: 0 });
 //& dollar symbol ( shift + 4 ) --> denotes that compare the pattern from last position
 
+//! get the details of the employees whose name's second letter is "s"
+// .a_____________
+db.emp.find({ name: { $regex: /^.s/ } }, { name: 1, _id: 0 });
+//& if we want to skip particular characters we use dot symbol(.). each dot represents the number of characters skipped.
+
+//! get the details of the employees whose name's third last letter is "s"
+db.emp.find({ name: { $regex: /s..$/ } }, { name: 1, _id: 0 });
+
+//! display emp names along with manager name whose manager's name contains exactly four letters
+db.emp.find(
+  {
+    manager: {
+      $regex: /^....$/,
+    },
+  },
+  {
+    name: 1,
+    _id: 0,
+    manager: 1,
+  }
+);
+
+//! get the details of user whose name starts with letter "c" and ends with "a".
+db.emp.find({ name: { $regex: /^c.*a$/ } }, { name: 1, _id: 0 });
+//& ".*" --> indicates skip multiple chars
+
 //? expr ==> expression
+//& it is used for comparison between document fields
+//? syntax for regex -->
+//? filter part { $expr: { $op: [a,b] } } in which a will appear first then b
+
+//! get the details of user whose salary is greater than 55,000
+// db.emp.find({ sal: { $gt: 55000 } });
+db.emp.find({
+  $expr: {
+    $gt: ["$sal", 55000],
+  },
+});
+
+//~ whenever we will pass document field as a value, enclose that in double quotes and prefix it with "$"
+//! display the age, deptNo and name of the emp whose deptNo is greater than age
+db.emp.find(
+  {
+    $expr: {
+      $gt: ["$deptNo", "$age"],
+    },
+  },
+  {
+    age: 1,
+    deptNo: 1,
+    _id: 0,
+    name: 2,
+  }
+);
+
+//! ====================== element operators ====>
+
+//? $exists --> it is used to fetch the documents based on wether the particular field is present or not
+//~ syntax --> { fieldName: {$exists: true/false} }
+db.emp.find({ email: { $exists: true } });
+//?  truthy and falsy values
+
+//? $type --> it is used to fetch the documents based on the datatype of the field
+//~ syntax --> { fieldName: {$type: "datatype"} }
+db.emp.find({ sal: { $type: "string" } });
+db.emp.find({ hobbies: { $type: "array" } });

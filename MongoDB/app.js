@@ -234,7 +234,7 @@ db.teachers.deleteMany({ email: "v@gmail.com" });
 //? ==> evaluation operators (regex, expr, etc..)
 //~ update operators
 //? ==> field update op (set, unset, etc..)
-//? ==> arithmetic update op (multiple, inc, etc..)
+//? ==> arithmetic update op (max, min, inc, etc..)
 //? ==> array update op (push, pull, etc..)
 //~ aggregation operators
 //? ==> pipeline stages op (match, group, etc..)
@@ -775,8 +775,7 @@ db.emp.find(
   }
 );
 
-//! ====================== element operators ====>
-
+//! ====================== element operators ========================>
 //? $exists --> it is used to fetch the documents based on wether the particular field is present or not
 //~ syntax --> { fieldName: {$exists: true/false} }
 db.emp.find({ email: { $exists: true } });
@@ -786,3 +785,87 @@ db.emp.find({ email: { $exists: true } });
 //~ syntax --> { fieldName: {$type: "datatype"} }
 db.emp.find({ sal: { $type: "string" } });
 db.emp.find({ hobbies: { $type: "array" } });
+
+//! ====================== update operators ==========================>
+//& updateOne/Many( {filter}, {updation}, {options} )
+//~ what we can update
+//& a) we can update existing value
+//& b) we can update existing key/field
+//& c) we can add a new key-value pair
+//& d) we can delete a key-value pair
+
+//~ field update operators --> $set, $unset, $rename
+
+//! 1) $set --> using this op, we can update existing value or we can add a new-key value pair
+//? syntax (updation part)--> { $set: { key: value } } // --> if given key is present it's value will be updated otherwise a new-key value pair will be added
+
+db.emp.updateOne({ email: "c@gmail.com" }, { $set: { isActive: false } });
+db.emp.updateOne(
+  { email: "c@gmail.com" },
+  { $set: { "address.pincode": 100200 } }
+);
+db.emp.updateOne({ email: "c@gmail.com" }, { $set: { contactNo: 1456789 } });
+db.emp.updateOne(
+  { _id: ObjectId("68d63c4c8c3d35637373518c") },
+  { $set: { sal: 61000 } }
+);
+
+db.emp.updateMany({ gender: "male" }, { $set: { haveInsurance: true } });
+
+db.emp.updateOne(
+  { _id: ObjectId("68d63c4c8c3d35637373518c") },
+  { $set: { sal: 61000, email: "newEmail", newKey: "newValue" } }
+);
+
+db.emp.updateOne({ name: "chetna" }, { $set: { contactNo: null } });
+
+//! 2) $unset --> using this op, we can delete key-value pair.
+//? syntax (updation part) ==> { $unset: { keyName: truthy value }  } ==> "" : this is exception
+
+db.emp.updateOne({ name: "chetna" }, { $unset: { contactNo: "some words" } });
+
+db.emp.updateOne(
+  { name: "sirisha" },
+  { $unset: { email: "some words", newKey: "" } }
+);
+
+//! 3) $rename --> using this op, we can rename the the existing key
+//? syntax (updation part)--> { $rename: { "old-key-name": "new-key-name" } }
+db.emp.updateMany({}, { $rename: { name: "userName" } });
+//& in updateMany() if filter condition is empty, all documents will be targeted
+//& in updateOne() if filter condition is empty, only first document will be targeted
+
+db.emp.updateMany({}, { $rename: { _id: "myId" } });
+db.emp.updateOne({ userName: "chetna" }, { $set: { _id: "something" } });
+
+//! arithmetic update op --> $max, $min, $inc
+//? syntax --> { $op: { keyName: value } }
+//! score --> 200: HS
+
+db.emp.updateOne({ userName: "chetna" }, { $max: { deptNo: 40 } });
+//? in case of $max op --> value passed should be strictly greater than the stored value
+//? in case of $min op --> value passed should be strictly lesser than the stored value
+//? if the field is not present it will be added with the given value
+
+db.scores.insertMany([
+  {
+    name: "abc",
+    highScore: 300,
+    lowScore: 120,
+  },
+  {
+    name: "def",
+    highScore: 120,
+    lowScore: 24,
+  },
+]);
+
+db.scores.updateOne({ name: "abc" }, { $max: { highScore: 240 } });
+db.scores.updateOne({ name: "abc" }, { $min: { lowScore: 130 } });
+
+db.scores.updateOne({ name: "abc" }, { $min: { scores: 130 } });
+
+//! $inc
+db.scores.updateOne({ name: "abc" }, { $inc: { myScore: -5 } });
+//? if the field is not present it will be added with the given value
+//? we cannot pass null as a value

@@ -838,7 +838,7 @@ db.emp.updateMany({}, { $rename: { name: "userName" } });
 db.emp.updateMany({}, { $rename: { _id: "myId" } });
 db.emp.updateOne({ userName: "chetna" }, { $set: { _id: "something" } });
 
-//! arithmetic update op --> $max, $min, $inc
+//! arithmetic update op --> $max, $min, $inc, $mul
 //? syntax --> { $op: { keyName: value } }
 //! score --> 200: HS
 
@@ -869,3 +869,103 @@ db.scores.updateOne({ name: "abc" }, { $min: { scores: 130 } });
 db.scores.updateOne({ name: "abc" }, { $inc: { myScore: -5 } });
 //? if the field is not present it will be added with the given value
 //? we cannot pass null as a value
+
+//~! the default value of upsert is false
+db.emp.updateOne({ userName: "vijay" }, { $set: { contact: 4567 } });
+db.emp.updateOne(
+  { userName: "vijay", job: "manager" }, //? filter
+  { $set: { contact: 123456789 } }, //? updation
+  { upsert: true } //? options --> upsert //? update + insert
+);
+//! scenario-1 --> filter condition is getting full filled
+//? a) upsert is false --> document is getting updated
+//? b) upsert is true --> document is getting updated
+
+//! scenario-2 --> filter condition is not getting full filled
+//? a) upsert is false --> nothing will happen
+//? b) upsert is true --> a new document is getting inserted with the given values
+
+//! >>>>>>>>>>>>>>>>>>>>>>>>>>>> array update operators <<<<<<<<<<<<<<<<<<<<
+//? 1) $push ==> it is used to add an element at the last of the array
+//? 2) $pullAll ==> it is used to remove all the elements from the array
+//? 3) $addToSet ==> it is used to add only unique elements in an array
+//? 4) $pop ==> it is used to remove elements from first or last
+//? 5) $push + $each ==> it is used to insert single/multiple elements at  time and $each should only be used with $push and also you can specify the position at which you want to insert
+
+//! syntax for $push -->
+//&  {  $push : { keyName: 'value' }  } (for inserting single element)
+//&  {  $push : { keyName: ['value1', 'value2'.....] }  } (for inserting multiple elements)
+db.emp.updateOne({ userName: "chetna" }, { $push: { hobbies: "gaming" } });
+db.emp.updateOne(
+  { userName: "chetna" },
+  { $push: { hobbies: ["basketball", "reading"] } }
+); //! here nested array is getting inserted
+
+//! syntax for $push with $each -->
+//? updation part:
+//? { $push: { keyName: { $each: [v1, v2, v3......] } } }
+
+db.emp.updateOne(
+  { userName: "ashwin" },
+  { $push: { hobbies: { $each: ["volleyball"], $position: 2 } } }
+);
+
+//! syntax for $pullAll -->
+//? updation part:
+//? { $pullAll: { keyName:  [v1, v2, v3.....] } }
+
+db.emp.updateOne(
+  { userName: "chetna" },
+  { $pullAll: { hobbies: ["cricket", "gaming"] } }
+);
+
+//! syntax for $pop -->
+//? updation part:
+//? { $pop: { keyName:  1/-1 } } (+1 for removing from the last and -1 for removing from the start)
+db.emp.updateOne({ userName: "chetna" }, { $pop: { hobbies: 1 } });
+
+//! syntax for $addToSet -->
+//&  {  $addToSet : { keyName: 'value' }  } (for inserting single element)
+db.emp.updateOne({ userName: "chetna" }, { $addToSet: { hobbies: "cooking" } });
+
+db.users.insertMany([
+  {
+    name: "john",
+    exp: [
+      { companyName: "google", duration: 0.4 },
+      {
+        companyName: "microsoft",
+        duration: 1.5,
+      },
+    ],
+  },
+  {
+    name: "jane",
+    exp: [
+      { companyName: "tcs", duration: 0.8 },
+      {
+        companyName: "zoho",
+        duration: 1,
+      },
+    ],
+  },
+  {
+    name: "doe",
+    exp: [
+      { companyName: "alphabet", duration: 1.7 },
+      {
+        companyName: "meta",
+        duration: 2,
+      },
+    ],
+  },
+]);
+
+//& syntax for $elemMatch ==>
+//? filter part --> { fieldName: {$elemMatch: { key: value } } }
+db.users.find({ exp: { $elemMatch: { duration: { $lt: 1 } } } });
+db.users.updateMany({ exp: { $elemMatch: { duration: { $lt: 1 } } } }, {});
+
+//! 1) update only the single-matched occurrence
+//! 2) update all the occurrences
+//! 3) update all the occurrences which have matched

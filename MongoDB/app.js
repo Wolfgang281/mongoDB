@@ -937,6 +937,10 @@ db.users.insertMany([
         companyName: "microsoft",
         duration: 1.5,
       },
+      {
+        companyName: "apple",
+        duration: 0.8,
+      },
     ],
   },
   {
@@ -964,8 +968,99 @@ db.users.insertMany([
 //& syntax for $elemMatch ==>
 //? filter part --> { fieldName: {$elemMatch: { key: value } } }
 db.users.find({ exp: { $elemMatch: { duration: { $lt: 1 } } } });
-db.users.updateMany({ exp: { $elemMatch: { duration: { $lt: 1 } } } }, {});
+db.users.updateMany(
+  { exp: { $elemMatch: { duration: { $lt: 1 } } } },
+  { $set: { new: false } }
+);
 
 //! 1) update only the single-matched occurrence
 //! 2) update all the occurrences
 //! 3) update all the occurrences which have matched
+
+//! 1) update only the single-matched occurrence
+db.users.updateMany(
+  { exp: { $elemMatch: { duration: { $lt: 1 } } } },
+  { $set: { "exp.$.newJoinee": true } }
+);
+
+db.users.find({ exp: { $elemMatch: { duration: { $lt: 1 } } } });
+
+db.users.updateOne(
+  { exp: { $elemMatch: { duration: { $lt: 1 } } } },
+  {
+    $set: { newJoinee: true },
+  }
+);
+db.users.updateOne(
+  { exp: { $elemMatch: { duration: { $lt: 1 } } } },
+  {
+    $set: { "exp.$.newJoinee": "true" },
+  }
+);
+//? "exp.$" ==> this represents first matched element
+
+//! 2) update all the occurrences
+db.users.updateOne(
+  { exp: { $elemMatch: { duration: { $lt: 1 } } } },
+  {
+    $set: { "exp.$[].newJoinee": "true" },
+  }
+);
+//? "exp.$[]" ==> this represents update all the elements if the condition is matched
+
+//! 3) update all the elements which have matched
+db.users.updateMany(
+  { exp: { $elemMatch: { duration: { $lt: 1 } } } },
+  {
+    $set: { "exp.$[el].newJoinee": "true" },
+  },
+  {
+    arrayFilters: [{ "el.duration": { $lt: 1 } }],
+  }
+);
+
+//! >>>>>>> EMBEDDED(nested) AND REFERENCE DATA <<<<<<<
+//? reference data --> in this, reference is passed as a field in another document
+
+//? embedded data --> in this we have nested documents inside a single document
+let emp = {
+  name: "abc",
+  age: 23,
+  contact: {
+    email: "abc@gmail.com",
+    contactNo: 1234567890,
+  },
+  address: {
+    city: "bangalore",
+    pincode: 123456,
+  },
+};
+
+db.users.insertOne({
+  name: "varun",
+  age: 34,
+  _id: "V123",
+  contactDetails: "C123",
+});
+
+db.contact.insertOne({
+  email: "def@gmail.com",
+  contactNo: 987654,
+  _id: "C567",
+});
+
+db.users.updateOne({ name: "chetna" }, { $set: { contactDetails: "C567" } });
+
+db.users.aggregate([
+  {
+    $lookup: {
+      from: "contact",
+      foreignField: "_id",
+      localField: "contactDetails",
+      as: "contactDetails",
+    },
+  },
+]);
+
+//! aggregation -->
+db.users.aggregate();

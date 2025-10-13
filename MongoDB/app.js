@@ -1062,5 +1062,75 @@ db.users.aggregate([
   },
 ]);
 
-//! aggregation -->
-db.users.aggregate();
+//! using aggregation we can only fetch --> while fetching complex calculation can be performed
+//! aggregation --> in mongodb, aggregation is the process of transforming and analyzing data from multiple documents in a collection to produce a computed results
+//! aggregation pipeline --> it is a sequence of stages that processes documents based on different aggregation operators.
+
+//~ db.collectionName.aggregate([{stage-1}, {stage-2}, {s3}, {s4},.....]);
+//! in each stage only one aggregation operator can be used
+//! each stage's op is given input to the next stage
+
+//? diff aggregation op -->
+//! 1) $match --> it is used to filter out the documents
+//! 2) $group --> it is used to group the documents
+//! 3) $project --> is it used to display the fields of a document and also used for aliasing
+//! 4) $sort --> used for sorting
+//! 5) $limit --> to limit the documents to be displayed
+//! 6) $skip  --> to skip the number of documents
+//! 7) $addFields --> it is used to add an extra field to a document while fetching
+//! 8) $unwind --> to remove the array from the document's field
+//! 9) $lookup --> to merge two or more collections
+
+//! syntax for all aggregation op
+db.employees.aggregate([{ $op: {} }, { $op: {} }]);
+
+//~ syntax for $match
+db.collectionName.aggregate([
+  {
+    $match: { condition },
+  },
+]);
+
+//~ syntax for $project
+db.collectionName.aggregate([
+  {
+    $project: { key: 1 / 0 },
+  },
+]);
+
+//~ syntax for $addFields
+db.collectionName.aggregate([
+  {
+    $addFields: {
+      key: value,
+    },
+  },
+]);
+
+//! fetch all the emp whose active is true
+db.employees.aggregate([{ $match: { active: true } }]);
+//? { active: true } this is your filter part
+
+//! display the names as userName and salaries of the emp whose active is true
+db.employees.aggregate([
+  { $match: { active: false } }, //? stage-1
+  { $project: { userName: "$name", salary: 1, _id: 0, active: 1 } }, //? stage-2
+]);
+
+db.employees.aggregate();
+
+//! display all the employees names and annual salary
+db.employees.aggregate([
+  {
+    $addFields: {
+      annualSalary: { $multiply: ["$salary", 12] },
+    },
+  }, //? stage -1
+  {
+    $project: {
+      name: 1,
+      annualSalary: 1,
+      _id: 0,
+    },
+  }, //? stage-2
+]);

@@ -238,7 +238,7 @@ db.teachers.deleteMany({ email: "v@gmail.com" });
 //? ==> array update op (push, pull, etc..)
 //~ aggregation operators
 //? ==> pipeline stages op (match, group, etc..)
-//? ==> accumulator op (max, min, etc..)
+//? ==> accumulator op (max, min, avg, count, sum)
 //? ==> arithmetic and date op (add, subtract, date, etc..)
 //~ projection operators ($, $slice, etc..)
 //~ geospatial operators ==> (GeoJSON format)
@@ -1073,7 +1073,7 @@ db.users.aggregate([
 //? diff aggregation op -->
 //! 1) $match --> it is used to filter out the documents
 //! 2) $group --> it is used to group the documents
-//! 3) $project --> is it used to display the fields of a document and also used for aliasing
+//! 3) $project --> is it used to display the fields of a document and also used for aliasing (giving some other names)
 //! 4) $sort --> used for sorting
 //! 5) $limit --> to limit the documents to be displayed
 //! 6) $skip  --> to skip the number of documents
@@ -1107,6 +1107,49 @@ db.collectionName.aggregate([
   },
 ]);
 
+//~ syntax for $group
+db.collectionName.aggregate([
+  {
+    $group: {
+      _id: "$field", //? write field for which you want the groups
+      count: { $sum: 1 },
+      max: { $max: "$fieldName" },
+      min: { $min: "$fieldName" },
+      avg: { $avg: "$fieldName" },
+      total: { $sum: "$fieldName" },
+    },
+  },
+]);
+
+//~ syntax for $sort
+db.collectionName.aggregate([
+  {
+    $sort: {
+      fieldName: 1 / -1, //~ 1 is for ascending order and -1 is for descending order
+    },
+  },
+]);
+
+//~ syntax for $limit
+db.collectionName.aggregate([
+  {
+    $limit: INTEGER,
+  },
+]);
+//~ syntax for $skip
+db.collectionName.aggregate([
+  {
+    $skip: INTEGER,
+  },
+]);
+
+//~ syntax for $unwind
+db.collectionName.aggregate([
+  {
+    $unwind: "$fieldName",
+  },
+]);
+
 //! fetch all the emp whose active is true
 db.employees.aggregate([{ $match: { active: true } }]);
 //? { active: true } this is your filter part
@@ -1133,4 +1176,229 @@ db.employees.aggregate([
       _id: 0,
     },
   }, //? stage-2
+]);
+
+//! group all the employees according to their dept ID's and display the emp names in each dept
+db.emp.aggregate([
+  {
+    $group: {
+      _id: "$deptNo",
+      count: { $sum: 1 },
+      maxSal: { $max: "$sal" },
+      minSal: { $min: "$sal" },
+      avgSal: { $avg: "$sal" },
+      totalSal: { $sum: "$sal" },
+      empNames: { $push: "$userName" },
+      genders: { $addToSet: "$gender" },
+    },
+  },
+  {
+    $match: {
+      //? having by
+      minSal: { $gt: 50000 },
+    },
+  },
+]);
+//& in group stage we can use accumulators op like max, min, avg ,count and sum
+
+//! questions
+/* 
+? 1) display number of employees working in each department. (each --> group)
+? 2) display total sal needed to pay all the emp in each dept.
+? 3) display number of emp and avg salary who is having 'a' in their name in each job
+? 4) display number of emp and avgSal, and maximum salary whose maximum sal is greater than 2000 in each dept. 
+? 5) display the ename, job, sal of emp who are working as manager in dept 20.
+? 6) details of emp along with the annual salary.
+
+                {
+                    $addFields: { fieldName : { expression } }  
+                }
+7) display ename, job, mid term sal of emp whose mid term sal > 12000.
+8) details of emp working as clerk in dept 10 or 30 having character 'a' in their names
+    and midterm sal is less than 10000
+9) display the number of emp working in each dept along with enames.
+10) display the maxSal, enames, job from each dept.
+11) display the count and deptno in each deptno whose count > 4.
+12) display the number of employees, max sal of employees in each job having max sal > 2000. */
+
+db.emp.aggregate([
+  {
+    $group: {
+      _id: "$deptNo",
+      numberOfEmp: { $sum: 1 },
+    },
+  },
+  {
+    $project: {
+      deptNo: "$_id",
+      _id: 0,
+      numberOfEmp: 1,
+    },
+  },
+]);
+
+db.emp.aggregate([
+  {
+    $group: {
+      _id: "$job",
+      totalSal: { $sum: "$sal" },
+    },
+  },
+  {
+    $project: {
+      job: "$_id",
+      _id: 0,
+      totalSal: 1,
+    },
+  },
+]);
+
+//! display total salary needed to pay to all the employees along with total number of employees
+db.emp.aggregate([
+  {
+    $group: {
+      _id: undefined,
+      totalSal: { $sum: "$sal" },
+      count: { $sum: 1 },
+    },
+  },
+]);
+
+//~ display number of emp and avg salary who is having 'a' in their name in each job
+//! filter >> group >> project
+
+db.emp.aggregate([
+  {
+    $match: {
+      empName: { $regex: /a/ },
+    },
+  },
+  {
+    $group: {
+      _id: "$job",
+      averageSal: { $avg: "$sal" },
+      count: { $sum: 1 },
+      empNames: { $push: "$empName" },
+    },
+  },
+  {
+    $project: {
+      job: "$_id",
+      _id: 0,
+      averageSal: 1,
+      count: 1,
+      empNames: 1,
+    },
+  },
+]);
+
+//! display number of emp and avgSal, and maximum salary whose maximum sal is greater than 2000 in each dept.
+//! display --> no, avgSal, max Sal : $group(deptNo)
+//! condition --> maXSal > 3000
+db.emp.aggregate([
+  {
+    $group: {
+      _id: "$deptNo",
+      count: { $sum: 1 },
+      avgSal: { $avg: "$sal" },
+      maxSal: { $max: "$sal" },
+    },
+  },
+  {
+    $match: {
+      maxSal: { $gt: 3000 },
+    },
+  },
+]);
+
+//! display all the employee names in sorted order
+db.emp.aggregate([
+  {
+    $sort: {
+      empName: -1,
+    },
+  },
+  {
+    $project: {
+      empName: 1,
+      _id: 0,
+    },
+  },
+]);
+
+db.emp.aggregate([
+  {
+    $sort: {
+      sal: -1,
+    },
+  },
+  {
+    $project: {
+      sal: 1,
+      empName: 1,
+      _id: 0,
+    },
+  },
+  {
+    $skip: 1,
+  },
+  {
+    $limit: 3,
+  },
+]);
+//! display the details of emp who is having second highest salary
+//? sort in descending order >> skip first doc >> limit 1
+db.emp.aggregate([
+  {
+    $sort: {
+      sal: -1,
+    },
+  },
+  {
+    $skip: 1,
+  },
+  {
+    $limit: 1,
+  },
+]);
+
+//! display the details of emp who is having third lowest salary
+db.emp.aggregate([
+  {
+    $group: {
+      _id: "$sal",
+      empName: { $push: "$empName" },
+    },
+  },
+  {
+    $sort: {
+      _id: 1,
+    },
+  },
+  {
+    $skip: 2,
+  },
+  {
+    $limit: 1,
+  },
+  {
+    $unwind: "$empName",
+  },
+]);
+
+//! ============ syntax for $lookup =================
+
+db.emp.aggregate([
+  //? emp --> local collection
+  //? foreign collection --> collection which you want to merge
+  //? in localField and foreignField you have to pass the field name which is common in both the collections
+  //? as --> to give a name to the merged collection
+  {
+    $lookup: {
+      from: "dept", //? name of the foreign collection to be merged
+      foreignField: "deptNo",
+      localField: "deptNo",
+      as: "deptNo",
+    },
+  },
 ]);

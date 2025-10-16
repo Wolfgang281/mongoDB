@@ -1398,7 +1398,198 @@ db.emp.aggregate([
       from: "dept", //? name of the foreign collection to be merged
       foreignField: "deptNo",
       localField: "deptNo",
+      as: "deptNo", //? generally same as localField
+    },
+  },
+]);
+
+//! users, products, cart
+let user = {
+  _id: "",
+  name: "",
+  contactNo: "",
+};
+
+let product = {
+  _id: "",
+  name: "",
+  price: "",
+};
+
+let cart = {
+  _id: "",
+  userId: "",
+  item1: { productId: "" },
+  item2: {},
+};
+
+db.users.insertMany([
+  {
+    _id: "UID123",
+    name: "varun",
+    contactNo: "1234567890",
+  },
+  {
+    _id: "UID789",
+    name: "chetna",
+    contactNo: "98765467",
+  },
+  {
+    _id: "UID456",
+    name: "sirisha",
+    contactNo: "987656789",
+  },
+]);
+
+db.products.insertMany([
+  {
+    _id: "PID123",
+    name: "laptop",
+    price: 50000,
+  },
+  {
+    _id: "PID456",
+    name: "mobile",
+    price: 15000,
+  },
+  {
+    _id: "PID789",
+    name: "tv",
+    price: 25000,
+  },
+]);
+
+db.carts.insertMany([
+  {
+    _id: "CID123",
+    userId: "UID789",
+    item1: { productId: "PID123" },
+    item2: { productId: "PID456" },
+  },
+  {
+    _id: "CID456",
+    userId: "UID456",
+    item1: { productId: "PID123" },
+    item2: { productId: "PID789" },
+  },
+  {
+    _id: "CID789",
+    userId: "UID123",
+    item1: { productId: "PID456" },
+    item2: { productId: "PID789" },
+  },
+]);
+
+db.carts.findOne({
+  _id: "CID123",
+});
+
+db.carts.aggregate([
+  {
+    $match: {
+      _id: "CID123",
+    },
+  },
+]);
+
+db.carts.aggregate([
+  {
+    $match: {
+      _id: "CID123",
+    },
+  },
+  {
+    $lookup: {
+      from: "users",
+      foreignField: "_id",
+      localField: "userId",
+      as: "userId",
+    },
+  },
+  {
+    $unwind: "$userId",
+  },
+  {
+    $project: {
+      item1: 1,
+      _id: 0,
+      userId: 0,
+    },
+  },
+]);
+
+db.carts.aggregate([
+  {
+    $match: {
+      _id: "CID123",
+    },
+  },
+  {
+    $lookup: {
+      from: "products",
+      foreignField: "_id",
+      localField: "item1.productId",
+      as: "item1",
+    },
+  },
+  {
+    $unwind: "$item1",
+  },
+  {
+    $project: {
+      "item1._id": 0,
+    },
+  },
+]);
+
+//! display all the emp name along with department locations whose location
+db.emp.aggregate([
+  {
+    $lookup: {
+      from: "dept",
+      localField: "deptNo",
+      foreignField: "deptNo",
       as: "deptNo",
+    },
+  },
+  { $unwind: "$deptNo" },
+  {
+    $project: {
+      empName: 1,
+      _id: 0,
+      location: "$deptNo.loc",
+    },
+  },
+]);
+
+//! display all the emp name along with department locations whose locations are chicago and new york and whose name contains letter a or o.
+db.emp.aggregate([
+  {
+    $match: {
+      empName: { $regex: /[ao]/ },
+    },
+  },
+  {
+    $lookup: {
+      from: "dept",
+      foreignField: "deptNo",
+      localField: "deptNo",
+      as: "deptNo",
+    },
+  },
+  {
+    $unwind: "$deptNo",
+  },
+  {
+    $match: {
+      "deptNo.loc": { $in: ["chicago", "new york"] },
+    },
+  },
+  {
+    $project: {
+      empName: 1,
+      _id: 0,
+      location: "$deptNo.loc",
     },
   },
 ]);
